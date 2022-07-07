@@ -1,0 +1,149 @@
+--REVISAR DATOS DE LA TABLA TIPO_TRANSACCION_TARJETA
+SELECT * FROM tipo_transaccion_tarjeta;
+SELECT TASAINT_TPTRAN_TARJETA
+FROM tipo_transaccion_tarjeta;
+
+--CREACIÓN DEL TRIGGER
+
+CREATE OR REPLACE TRIGGER TR_1
+BEFORE INSERT OR DELETE OR UPDATE OF TASAINT_PRODUCTO ON PRODUCTO
+FOR EACH ROW
+DECLARE
+BEGIN
+    IF UPDATING THEN
+        IF (:NEW.TASAINT_PRODUCTO > :OLD.TASAINT_PRODUCTO) THEN
+            UPDATE tipo_transaccion_tarjeta
+            SET TASAINT_TPTRAN_TARJETA = TASAINT_TPTRAN_TARJETA + 0.01 
+            WHERE COD_PRODUCTO = :NEW.COD_PRODUCTO;
+        END IF;
+    END IF;
+END;
+
+DROP TRIGGER TR_1;
+
+--INSERTAR, ACTUALIZAR O ELIMINAR DATOS
+BEGIN
+    UPDATE PRODUCTO SET TASAINT_PRODUCTO = 0.5 WHERE COD_PRODUCTO = 4;   
+    UPDATE PRODUCTO SET TASAINT_PRODUCTO = 0.1 WHERE COD_PRODUCTO = 2;
+    UPDATE PRODUCTO SET TASAINT_PRODUCTO = 0.05 WHERE COD_PRODUCTO =1;
+END;
+/
+ROLLBACK;
+/
+--ROLLBACK;
+
+
+--caso 2
+CREATE DIRECTORY fotos_examen1 AS 'fotos_examen1';
+GRANT create, READ, WRITE ON DIRECTORY Img_Cliente TO ExTrMDY;
+
+BEGIN
+  dbms_cloud.create_credential(credential_name => 'fotos_examen1', username => 'oracleidentitycloudservice/fa.palma@duocuc.cl'
+  , password => 'lMXa]#CW[{b}j_q1t-;6');
+END;
+
+CREATE OR REPLACE PROCEDURE pro_img IS
+
+    v_blob             BLOB;
+    v_bfile            BFILE;
+    v_existe_archivo   NUMBER(2);
+    v_directorio       VARCHAR2(20);
+    v_foto             VARCHAR2(20);
+    --v_reg_foto         bfile;
+--CURSOR PARA RECUPERAR LOS DATOS DE LA TABLA CLIENTE
+    CURSOR cur_foto IS
+    SELECT * FROM cliente;
+    v_reg cur_foto%rowtype;
+BEGIN
+--inciando el recorrido
+    OPEN cur_foto;
+    LOOP
+        FETCH cur_foto INTO v_reg.numrun ,v_reg.dvrun, v_reg.pnombre, v_reg.snombre, v_reg.appaterno, v_reg.apmaterno, v_reg.foto, v_reg.fecha_nacimiento, v_reg.fecha_inscripcion, v_reg.correo, v_reg.fono_contacto, v_reg.direccion, v_reg.cod_region, v_reg.cod_provincia, v_reg.cod_comuna, v_reg.cod_ocupacion, v_reg.cod_tipo;
+            --v_reg_foto;  
+    EXIT WHEN cur_foto%notfound;
+    v_blob := v_reg.foto;
+    v_foto := v_reg.numrun || '.jpg';
+    v_bfile := bfilename('CLIENTES_FOTOS', v_foto);
+    v_existe_archivo := dbms_lob.fileexists(v_bfile);
+    IF v_existe_archivo = 1 THEN
+     --actualizamos cliente el atributo foto con el 
+         update cliente set foto = v_bfile; 
+    END IF;
+
+    END LOOP;
+
+END pro_img;
+/
+drop procedure pro_img;
+/
+--caso 3
+create or replace package pkg_examenT1 is 
+    v_1 varchar2(300);
+    v_2 varchar2(300);
+    v_3 varchar2(300);
+    v_4 varchar2(300);
+        function fn_factor_aumento(p_fecha_exec number, p_factor number) return number;
+        PROCEDURE P_GRABAR_ERROR(p_rutina_error VARCHAR2, p_mensaje_error VARCHAR2);
+end pkg_examenT1;
+
+/
+CREATE OR REPLACE PACKAGE pkg_caso3 IS
+    v_func1 VARCHAR2(100);
+    v_func2 VARCHAR2(100);
+    v_func3 VARCHAR2(100);
+    v_func4 VARCHAR2(100);
+    FUNCTION fn_aumento (
+        p_fecha    NUMBER,
+        p_factor   NUMBER
+    ) RETURN NUMBER;
+
+    PROCEDURE pro_errores (
+        p_err       VARCHAR2,
+        p_msj_err   VARCHAR2
+    );
+
+END pkg_caso3;
+
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+CREATE OR REPLACE PACKAGE BODY pkg_caso3 IS
+
+    FUNCTION fn_aumento (
+        p_fecha NUMBER
+    ) RETURN NUMBER IS
+        v_descuento NUMBER;
+    BEGIN
+        SELECT
+            porc_aumento
+        INTO v_descuento
+        FROM
+            rango_aumento_cupocompra
+        WHERE
+            p_fecha BETWEEN ant_min AND ant_max;
+
+        RETURN v_descuento;
+    EXCEPTION
+        WHEN OTHERS THEN
+            v_error := sqlerrm;
+            v_msj := 'FN_PORC_AUMENTO_CUPO';
+            pro_errores(v_1, v_3);
+            RETURN 0;
+    END fn_aumento;
+
+    PROCEDURE pro_errores (
+        p_err       VARCHAR2,
+        p_msj_err   VARCHAR2
+    ) IS
+    BEGIN
+        INSERT INTO error_procesos_mensuales VALUES (
+            v_error,
+            v_4
+        );
+
+    END pro_errores;
+
+END pkg_caso3;
+/
+--Profe, con un 3 me salvo todo ojala este weno este script, solo me da el error de "CREATE"
+
